@@ -1,0 +1,55 @@
+# ── Secrets — never commit these ─────────────────────────────
+.env
+*.env
+.env.*
+!.env.example
+
+# ── Python ───────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyd
+*.pyo
+*.pyw
+.Python
+.venv/
+venv/
+env/
+ENV/
+pip-wheel-metadata/
+*.egg-info/
+dist/
+build/
+*.so
+
+# ── Logs ─────────────────────────────────────────────────────
+logs/*.log
+logs/*.log.*
+
+# ── Temp clone directories used by scanners ──────────────────
+/tmp/swiftaudit_clones/
+swiftaudit_clones/
+
+# ── Generated reports ────────────────────────────────────────
+reports/output/*.pdf
+reports/output/*.md
+reports/output/*.html
+
+# ── Testing ──────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── OS ───────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# ── IDE ──────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

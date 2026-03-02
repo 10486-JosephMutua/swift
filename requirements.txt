@@ -1,0 +1,66 @@
+# Core
+flask==3.0.3
+flask-cors==4.0.1
+
+# LangChain / LangGraph
+langchain==0.3.25
+langchain-core==0.3.62
+langchain-community==0.3.24
+langchain-groq==0.3.5
+langgraph==0.4.8
+
+# Groq
+groq==0.25.0
+
+# GitHub
+PyGithub==2.6.1
+gitpython==3.1.44
+requests==2.32.3
+
+# JSON
+json-repair==0.*
+
+# File detection
+binaryornot==0.4.4
+
+# Language detection
+Pygments==2.18.0
+
+# Scan store
+cachetools==5.5.2
+
+# Templating
+Jinja2==3.1.4
+
+# Secrets scanner
+detect-secrets==1.5.0
+
+# Tokens
+tiktoken==0.9.0
+
+# Data
+pydantic==2.11.5
+python-dotenv==1.0.1
+
+# Retry
+tenacity==9.0.0
+
+# PDF
+reportlab==4.2.5
+markdown2==2.5.3
+weasyprint==62.3
+
+# Encoding
+chardet==5.2.0
+
+# Utilities
+humanize==4.11.0
+rich==13.9.4
+
+# Testing
+pytest==8.3.5
+pytest-flask==1.3.0
+
+# External tools (install separately):
+#   npm install -g snyk && snyk auth
+#   brew install trivy  OR  apt install trivy

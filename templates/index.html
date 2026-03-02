@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SwiftAudit — AI Security Platform</title>
+
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- React 18 (production) -->
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+
+<!-- Babel standalone (JSX transpiler) -->
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<!-- Fonts: DM Mono (data/code) + Outfit (display/headings) -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        mono:    ['DM Mono', 'monospace'],
+        display: ['Outfit', 'sans-serif'],
+      },
+      colors: {
+        ink:    '#07090e',
+        pit:    '#0b0e16',
+        well:   '#111520',
+        card:   '#161c28',
+        rim:    '#1e2638',
+        fence:  '#28334a',
+        ash:    '#4a5568',
+        fog:    '#8492a6',
+        mist:   '#b8c4d4',
+        snow:   '#e8eef8',
+        /* accents */
+        lime:   '#4ade80',
+        cyan:   '#22d3ee',
+        sky:    '#60a5fa',
+        mauve:  '#c084fc',
+        gold:   '#fbbf24',
+        coral:  '#f87171',
+      },
+    },
+  },
+};
+</script>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; }
+
+  body {
+    background: #07090e;
+    color: #b8c4d4;
+    font-family: 'DM Mono', monospace;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ── scrollbar ── */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: #0b0e16; }
+  ::-webkit-scrollbar-thumb { background: #28334a; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #4a5568; }
+
+  /* ── noise overlay ── */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: .028;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ── grid ── */
+  .grid-bg {
+    background-image:
+      linear-gradient(rgba(34,211,238,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(34,211,238,.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  /* ── orbs ── */
+  .orb { position: fixed; border-radius: 50%; pointer-events: none; filter: blur(2px); }
+
+  /* ── cta gradient button ── */
+  .btn-glow {
+    background: linear-gradient(120deg, #22d3ee, #4ade80, #22d3ee);
+    background-size: 200% auto;
+    animation: btnShimmer 3s linear infinite;
+    color: #07090e;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    letter-spacing: .02em;
+  }
+  @keyframes btnShimmer { to { background-position: -200% center; } }
+
+  /* ── spinner ── */
+  .spinner {
+    border: 2px solid rgba(34,211,238,.2);
+    border-top-color: #22d3ee;
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── pulse dots ── */
+  @keyframes blink {
+    0%, 100% { opacity: .2; transform: scale(1); }
+    50%       { opacity: 1;  transform: scale(1.4); }
+  }
+
+  /* ── slide-up entrance ── */
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .anim-up { animation: slideUp .32s ease-out both; }
+
+  /* ── fade in ── */
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .anim-fade { animation: fadeIn .22s ease-out both; }
+
+  /* ── slide in from left ── */
+  @keyframes slideLeft {
+    from { opacity: 0; transform: translateX(-10px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .anim-left { animation: slideLeft .22s ease-out both; }
+
+  /* ── active phase glow ── */
+  .phase-active {
+    box-shadow: 0 0 0 1px rgba(34,211,238,.35), 0 0 18px -3px rgba(34,211,238,.2);
+  }
+
+  /* ── severity badges ── */
+  .b-CRITICAL { background: rgba(248,113,113,.12); color: #f87171; border-color: rgba(248,113,113,.4); }
+  .b-HIGH     { background: rgba(251,191,36,.10);  color: #fbbf24; border-color: rgba(251,191,36,.35); }
+  .b-MEDIUM   { background: rgba(192,132,252,.10); color: #c084fc; border-color: rgba(192,132,252,.35); }
+  .b-LOW      { background: rgba(96,165,250,.10);  color: #60a5fa; border-color: rgba(96,165,250,.35); }
+  .b-INFO     { background: rgba(74,222,128,.08);  color: #4ade80; border-color: rgba(74,222,128,.3); }
+
+  /* ── source labels ── */
+  .s-snyk_code      { color: #4ade80; }
+  .s-trivy          { color: #60a5fa; }
+  .s-snyk_iac       { color: #fbbf24; }
+  .s-snyk_container { color: #c084fc; }
+  .s-history_guard  { color: #22d3ee; }
+  .s-llm_only       { color: #8492a6; }
+  .s-llm_enriched   { color: #8492a6; }
+
+  /* ── finding card hover ── */
+  .fcard {
+    transition: background .14s, border-color .14s, transform .12s;
+    cursor: pointer;
+  }
+  .fcard:hover { background: #1e2638; border-color: #4a5568; transform: translateX(3px); }
+
+  /* ── expand/collapse ── */
+  .expand { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .22s ease; }
+  .expand.open { grid-template-rows: 1fr; }
+  .expand > div { overflow: hidden; }
+
+  /* ── progress bar track ── */
+  .prog-track { background: #1e2638; border-radius: 4px; overflow: hidden; }
+  .prog-fill  {
+    height: 100%;
+    border-radius: 4px;
+    transition: width .7s ease-out;
+    position: relative;
+    overflow: hidden;
+  }
+  .prog-fill::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.25) 50%, transparent 100%);
+    animation: shimProg 1.8s linear infinite;
+  }
+  @keyframes shimProg { from { transform: translateX(-100%); } to { transform: translateX(200%); } }
+
+  /* ── terminal ── */
+  .term { font-size: 11px; line-height: 1.75; }
+  .term-scroll { overflow-y: auto; scrollbar-width: thin; scrollbar-color: #28334a #0b0e16; }
+
+  /* ── radar chart ── */
+  .radar-poly { fill: rgba(34,211,238,.12); stroke: #22d3ee; stroke-width: 1.5; }
+  .radar-grid { fill: none; stroke: #1e2638; stroke-width: .8; }
+
+  /* ── bar chart ── */
+  .bar-fill { transition: width .8s ease-out; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+/* ════════════════════════════════════════════════════════════
+   IMPORTS & HOOKS
+════════════════════════════════════════════════════════════ */
+const {
+  useState, useEffect, useRef,
+  useCallback, useMemo, Fragment
+} = React;
+
+/* ════════════════════════════════════════════════════════════
+   CONSTANTS
+════════════════════════════════════════════════════════════ */
+const API = '/api/v1';
+
+const PHASES = [
+  { id:'navigator',  label:'Navigator',    icon:'🔍', note:'Mapping repository' },
+  { id:'researcher', label:'Researcher',   icon:'🔬', note:'Cloning & scanning'  },
+  { id:'scanner',    label:'Scanners',     icon:'🛡',  note:'Snyk + Trivy + IAC'  },
+  { id:'analysis',   label:'LLM Analysis', icon:'🧠', note:'AI vulnerability audit' },
+  { id:'exploiter',  label:'Exploiter',    icon:'⚔',  note:'Attack simulation'    },
+  { id:'auditor',    label:'Auditor',      icon:'📊', note:'Building report'      },
+];
+
+const SEV_RANK  = { CRITICAL:0, HIGH:1, MEDIUM:2, LOW:3, INFO:4 };
+const SEV_COLOR = { CRITICAL:'#f87171', HIGH:'#fbbf24', MEDIUM:'#c084fc', LOW:'#60a5fa', INFO:'#4ade80' };
+const GRADE_COL = { A:'#4ade80', B:'#60a5fa', C:'#fbbf24', D:'#f87171', F:'#f87171' };
+
+/* ════════════════════════════════════════════════════════════
+   UTILS
+════════════════════════════════════════════════════════════ */
+const cx  = (...a) => a.filter(Boolean).join(' ');
+const num = n => (n ?? 0).toLocaleString();
+const dur = s => {
+  if (!s) return '—';
+  return s < 60 ? `${Math.round(s)}s` : `${Math.floor(s/60)}m ${Math.round(s%60)}s`;
+};
+
+/* ════════════════════════════════════════════════════════════
+   INLINE SVG ICONS  (zero external deps)
+════════════════════════════════════════════════════════════ */
+const Ic = {
+  Shield: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    </svg>
+  ),
+  Search: () => (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+  ),
+  Check: () => (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+  ),
+  ChevDown: () => (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m6 9 6 6 6-6"/>
+    </svg>
+  ),
+  ChevRight: () => (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m9 18 6-6-6-6"/>
+    </svg>
+  ),
+  File: () => (
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+      <polyline points="14 2 14 8 20 8"/>
+    </svg>
+  ),
+  Copy: () => (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2"/>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+    </svg>
+  ),
+  Plus: () => (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+  ),
+  Link: () => (
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+      <polyline points="15 3 21 3 21 9"/>
+      <line x1="10" y1="14" x2="21" y2="3"/>
+    </svg>
+  ),
+  Warn: () => (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+      <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+  ),
+  Terminal: () => (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="4 17 10 11 4 5"/>
+      <line x1="12" y1="19" x2="20" y2="19"/>
+    </svg>
+  ),
+};
+
+/* ════════════════════════════════════════════════════════════
+   REUSABLE: SeverityBadge
+════════════════════════════════════════════════════════════ */
+function SevBadge({ sev }) {
+  return (
+    <span className={cx(`b-${sev}`,
+      'inline-flex items-center px-[7px] py-[2px] rounded text-[9px] font-mono font-medium border tracking-[.1em] uppercase flex-shrink-0'
+    )}>
+      {sev}
+    </span>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   REUSABLE: SourceTag
+════════════════════════════════════════════════════════════ */
+function SrcTag({ src }) {
+  const labels = {
+    snyk_code:'Snyk Code', trivy:'Trivy', snyk_iac:'Snyk IAC',
+    snyk_container:'Container', history_guard:'Git History',
+    llm_only:'LLM', llm_enriched:'LLM+Tool',
+  };
+  return (
+    <span className={cx(`s-${src}`, 'text-[9px] font-mono flex-shrink-0 tracking-wide')}>
+      {labels[src] || src}
+    </span>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   REUSABLE: PulseDots
+════════════════════════════════════════════════════════════ */
+function PulseDots() {
+  return (
+    <span className="inline-flex gap-[3px] items-center ml-1">
+      {[0,1,2].map(i => (
+        <span
+          key={i}
+          className="w-[5px] h-[5px] rounded-full bg-cyan"
+          style={{ animation:`blink 1.3s ease-in-out ${i*0.18}s infinite` }}
+        />
+      ))}
+    </span>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   REUSABLE: ProgressBar
+════════════════════════════════════════════════════════════ */
+function ProgBar({ pct, phase }) {
+  const phaseColor = {
+    navigator:'#22d3ee', researcher:'#60a5fa', scanner:'#4ade80',
+    analysis:'#c084fc', exploiter:'#fbbf24', auditor:'#4ade80', pipeline:'#22d3ee',
+  };
+  const col = phaseColor[phase] || '#22d3ee';
+  return (
+    <div className="prog-track w-full h-[6px]">
+      <div
+        className="prog-fill"
+        style={{ width:`${pct}%`, background: col, boxShadow:`0 0 8px ${col}60` }}
+      />
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   REUSABLE: PhaseTracker (sidebar)
+════════════════════════════════════════════════════════════ */
+function PhaseTracker({ currentPhase }) {
+  const curIdx = PHASES.findIndex(p => p.id === currentPhase);
+  return (
+    <div className="space-y-[3px]">
+      {PHASES.map((ph, i) => {
+        const done   = i < curIdx;
+        const active = i === curIdx;
+        const pend   = i > curIdx;
+        return (
+          <div
+            key={ph.id}
+            className={cx(
+              'flex items-center gap-3 px-3 py-[10px] rounded-xl transition-all duration-300',
+              active && 'bg-cyan/[.06] border border-cyan/20 phase-active',
+              done   && 'opacity-50',
+              pend   && 'opacity-20',
+            )}
+          >
+            {/* Icon */}
+            <div className={cx(
+              'w-7 h-7 rounded-lg flex items-center justify-center text-[13px] flex-shrink-0',
+              active && 'bg-cyan/15 text-cyan',
+              done   && 'bg-lime/10 text-lime',
+              pend   && 'bg-card text-ash',
+            )}>
+              {done ? <Ic.Check/> : ph.icon}
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center">
+                <span className={cx(
+                  'text-[11px] font-display font-700',
+                  active && 'text-snow',
+                  done   && 'text-lime',
+                  pend   && 'text-ash',
+                )}>
+                  {ph.label}
+                </span>
+                {active && <PulseDots/>}
+              </div>
+              <p className="text-[9px] text-ash mt-[1px] leading-tight">{ph.note}</p>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   REUSABLE: Terminal (live log)
+════════════════════════════════════════════════════════════ */
+function Terminal({ logs }) {
+  const endRef = useRef(null);
+
+  useEffect(() => {
+    if (endRef.current) {
+      endRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [logs.length]);
+
+  /* Colour [BRACKETED] tokens */
+  function colour(msg) {
+    return msg
+      .replace(/\[([A-Z_\.:\d]+)\]/g, (_,t) => `<span style="color:#60a5fa;opacity:.75">[${t}]</span>`)
+      .replace(/(✅|✔)/g,   '<span style="color:#4ade80">$1</span>')
+      .replace(/(❌|✗)/g,   '<span style="color:#f87171">$1</span>')
+      .replace(/(⚠|⚠️)/g,   '<span style="color:#fbbf24">$1</span>')
+      .replace(/(🔍|🔬|🛡|🧠|⚔|📊|🚀|📡|🔗)/g, '<span style="opacity:.7">$1</span>');
+  }
+
+  function levelIcon(l) {
+    if (l === 'ERROR')   return { icon:'✗', col:'#f87171' };
+    if (l === 'WARNING') return { icon:'!', col:'#fbbf24' };
+    return { icon:'›', col:'#4ade80' };
+  }
+
+  return (
+    <div className="flex flex-col bg-pit border border-rim rounded-xl overflow-hidden">
+      {/* Chrome */}
+      <div className="flex items-center gap-2 px-4 py-2 bg-well border-b border-rim flex-shrink-0">
+        <div className="flex gap-[5px]">
+          <span className="w-[10px] h-[10px] rounded-full bg-coral/60"/>
+          <span className="w-[10px] h-[10px] rounded-full bg-gold/60"/>
+          <span className="w-[10px] h-[10px] rounded-full bg-lime/60"/>
+        </div>
+        <span className="text-[10px] text-ash ml-2 flex items-center gap-1.5">
+          <Ic.Terminal/> pipeline output
+        </span>
+        <span className="ml-auto text-[9px] text-ash">{logs.length} lines</span>
+      </div>
+
+      {/* Lines */}
+      <div
+        className="term term-scroll flex-1 p-4 space-y-[1px]"
+        style={{ maxHeight:'320px', minHeight:'180px' }}
+      >
+        {logs.length === 0 && (
+          <span className="text-ash italic">Waiting for pipeline…</span>
+        )}
+        {logs.map((line, i) => {
+          const { icon, col } = levelIcon(line.level);
+          return (
+            <div
+              key={i}
+              className="flex gap-2 anim-fade"
+              style={{ animationDelay: `${Math.min(i * .012, .3)}s` }}
+            >
+              <span className="flex-shrink-0 select-none" style={{ color: col }}>{icon}</span>
+              <span
+                className="text-mist/85 break-all"
+                dangerouslySetInnerHTML={{ __html: colour(line.msg) }}
+              />
+            </div>
+          );
+        })}
+        <div ref={endRef}/>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   REUSABLE: LiveFindingsFeed
+════════════════════════════════════════════════════════════ */
+function LiveFeed({ findings }) {
+  if (!findings.length) return null;
+  const latest = [...findings].reverse().slice(0, 7);
+  return (
+    <div className="bg-card border border-rim rounded-xl p-4">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-[9px] text-ash uppercase tracking-[.15em]">Live findings stream</span>
+        <span className="font-display font-700 text-snow text-sm">{findings.length}</span>
+      </div>
+      <div className="space-y-[6px]">
+        {latest.map((f, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-2 anim-left"
+            style={{ animationDelay:`${i*.04}s` }}
+          >
+            <SevBadge sev={f.severity}/>
+            <span className="text-[11px] text-mist/80 truncate flex-1 font-mono">{f.title}</span>
+            <SrcTag src={f.source}/>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   PAGE: LANDING
+════════════════════════════════════════════════════════════ */
+function LandingPage({ onStart }) {
+  const [url,  setUrl]  = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err,  setErr]  = useState('');
+  const inputRef = useRef(null);
+
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  async function submit(e) {
+    e.preventDefault();
+    const u = url.trim();
+    if (!u)                    { setErr('Enter a GitHub repository URL'); return; }
+    if (!u.startsWith('http')) { setErr('URL must start with https://'); return; }
+    setBusy(true); setErr('');
+    try {
+      const res = await fetch(`${API}/scan`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ repo_url: u }),
+      });
+      // Read as text first — Flask may return HTML on crash, not JSON
+      const text = await res.text();
+      let d = null;
+      try { d = JSON.parse(text); } catch { /* non-JSON */ }
+      if (!res.ok) throw new Error(d?.error || `Server error ${res.status}: ${text.slice(0, 200)}`);
+      if (!d?.scan_id) throw new Error(`Unexpected server response: ${text.slice(0, 200)}`);
+      onStart(d.scan_id, u);
+    } catch (ex) {
+      setErr(ex.message);
+      setBusy(false);
+    }
+  }
+
+  const demos = [
+    'https://github.com/stamparm/DSVW',
+    'https://github.com/WebGoat/WebGoat',
+    'https://github.com/juice-shop/juice-shop',
+  ];
+
+  const caps = ['Snyk Code','Trivy SCA','Snyk IAC','Snyk Container','HistoryGuard','LLM Reasoning'];
+
+  return (
+    <div className="relative min-h-screen flex flex-col items-center justify-center grid-bg overflow-hidden px-4">
+      {/* Ambient orbs */}
+      <div className="orb" style={{
+        width:700, height:700, top:'-240px', left:'-200px',
+        background:'radial-gradient(circle, rgba(34,211,238,.06) 0%, transparent 65%)',
+      }}/>
+      <div className="orb" style={{
+        width:500, height:500, bottom:'-180px', right:'-160px',
+        background:'radial-gradient(circle, rgba(192,132,252,.05) 0%, transparent 65%)',
+      }}/>
+
+      <div className="relative z-10 w-full max-w-[520px] anim-up">
+
+        {/* Logo row */}
+        <div className="flex items-center gap-3 justify-center mb-10">
+          <div className="w-11 h-11 rounded-2xl bg-cyan/10 border border-cyan/25 flex items-center justify-center text-cyan">
+            <Ic.Shield/>
+          </div>
+          <div>
+            <h1 className="font-display font-900 text-[22px] tracking-tight text-snow leading-none">
+              SwiftAudit
+            </h1>
+            <p className="text-[9px] text-ash font-mono tracking-[.22em] uppercase mt-[2px]">
+              AI Security Platform
+            </p>
+          </div>
+          <span className="ml-auto text-[9px] font-mono text-cyan border border-cyan/25 bg-cyan/5 px-[10px] py-[5px] rounded-full tracking-[.12em]">
+            v10
+          </span>
+        </div>
+
+        {/* Headline */}
+        <div className="text-center mb-10">
+          <h2
+            className="font-display font-900 leading-[1.08] mb-4"
+            style={{ fontSize:'clamp(2rem, 6vw, 3.2rem)' }}
+          >
+            <span className="text-snow">Find vulnerabilities</span><br/>
+            <span style={{
+              background: 'linear-gradient(90deg, #22d3ee, #4ade80)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}>
+              before attackers do
+            </span>
+          </h2>
+          <p className="text-fog text-[12px] leading-relaxed font-mono">
+            Parallel SAST + SCA + AI analysis with real-time streaming.<br/>
+            Watch every step as it happens — nothing hidden.
+          </p>
+        </div>
+
+        {/* Card */}
+        <div className="bg-card border border-rim rounded-2xl p-6 shadow-2xl mb-5">
+          <form onSubmit={submit}>
+            <label className="block text-[9px] font-mono text-ash uppercase tracking-[.18em] mb-2">
+              GitHub repository URL
+            </label>
+            <div className="flex gap-2">
+              <input
+                ref={inputRef}
+                type="text"
+                value={url}
+                onChange={e => { setUrl(e.target.value); setErr(''); }}
+                placeholder="https://github.com/owner/repo"
+                disabled={busy}
+                className="flex-1 bg-well border border-rim rounded-xl px-4 py-[11px] text-[12px] font-mono text-snow placeholder-ash/50 focus:outline-none focus:border-cyan/40 focus:ring-1 focus:ring-cyan/15 transition disabled:opacity-50"
+              />
+              <button
+                type="submit"
+                disabled={busy || !url.trim()}
+                className="btn-glow px-5 py-[11px] rounded-xl text-[13px] disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
+              >
+                {busy ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-3.5 h-3.5 spinner inline-block"/>
+                    Starting
+                  </span>
+                ) : 'Analyse →'}
+              </button>
+            </div>
+            {err && (
+              <div className="mt-3 flex items-center gap-2 text-coral text-[11px] font-mono anim-fade">
+                <Ic.Warn/> {err}
+              </div>
+            )}
+          </form>
+
+          {/* Demo repos */}
+          <div className="mt-5 pt-4 border-t border-rim">
+            <p className="text-[9px] font-mono text-ash/60 uppercase tracking-[.18em] mb-2">
+              Demo repositories
+            </p>
+            {demos.map(d => (
+              <button
+                key={d}
+                onClick={() => { setUrl(d); setErr(''); }}
+                className="flex items-center gap-1.5 text-[11px] font-mono text-fog hover:text-cyan transition-colors mb-1 group"
+              >
+                <span className="group-hover:translate-x-[1px] transition-transform"><Ic.Link/></span>
+                {d.replace('https://github.com/', 'github.com/')}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Capability badges */}
+        <div className="flex flex-wrap gap-[7px] justify-center">
+          {caps.map(c => (
+            <span
+              key={c}
+              className="text-[9px] font-mono text-ash border border-fence/70 bg-well/50 px-3 py-[5px] rounded-full tracking-wide"
+            >
+              {c}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   PAGE: SCANNING  (real-time pipeline view)
+════════════════════════════════════════════════════════════ */
+function ScanningPage({ scanId, repoUrl, onComplete }) {
+  const [pct,      setPct]      = useState(5);
+  const [phase,    setPhase]    = useState('navigator');
+  const [step,     setStep]     = useState('Initialising pipeline…');
+  const [logs,     setLogs]     = useState([]);
+  const [findings, setFindings] = useState([]);
+  const [errMsg,   setErrMsg]   = useState('');
+  const esRef = useRef(null);
+
+  /* Bounded log push — keep last 400 lines */
+  const addLog = useCallback((msg, level = 'INFO') => {
+    setLogs(prev => {
+      const next = [...prev, { msg, level, ts: Date.now() }];
+      return next.length > 400 ? next.slice(-400) : next;
+    });
+  }, []);
+
+  useEffect(() => {
+    /* Initial log lines */
+    addLog(`🚀 Scan initialised  id=${scanId.slice(0,8)}…`);
+    addLog(`🔗 Target: ${repoUrl}`);
+    addLog(`📡 Opening SSE stream → /api/v1/scan/${scanId}/stream`);
+    addLog(`⏳ Pipeline stages: Navigator → Researcher → Scanners → LLM → Exploiter → Auditor`);
+
+    const es = new EventSource(`${API}/scan/${scanId}/stream`);
+    esRef.current = es;
+
+    /* ── progress ───────────────────────────────────────── */
+    es.addEventListener('progress', e => {
+      const d = JSON.parse(e.data);
+      const p = d.pct  || 0;
+      const s = d.step || '';
+      const h = d.phase || 'pipeline';
+      setPct(p);
+      setPhase(h);
+      setStep(s);
+      /* Every progress update appears in the log */
+      if (s) addLog(`[${h.toUpperCase()}] ${s}`);
+    });
+
+    /* ── log (internal pipeline messages) ──────────────── */
+    es.addEventListener('log', e => {
+      const d = JSON.parse(e.data);
+      addLog(d.message, d.level || 'INFO');
+    });
+
+    /* ── finding ────────────────────────────────────────── */
+    es.addEventListener('finding', e => {
+      const d = JSON.parse(e.data);
+      setFindings(prev => [...prev, d]);
+      const col = { CRITICAL:'🔴', HIGH:'🟠', MEDIUM:'🟣', LOW:'🔵', INFO:'🟢' };
+      addLog(`  ↳ [FINDING] ${col[d.severity] || '·'} [${d.severity}] ${d.title}  ←  ${d.source}`);
+      if (d.file) addLog(`     file: ${d.file}`);
+    });
+
+    /* ── complete ───────────────────────────────────────── */
+    es.addEventListener('complete', e => {
+      const d = JSON.parse(e.data);
+      addLog(`✅ Scan complete!`);
+      addLog(`   Score    : ${d.score}/100   Grade: ${d.grade}`);
+      addLog(`   Findings : ${d.total_findings}  (critical: ${d.critical||0}  high: ${d.high||0})`);
+      addLog(`   Duration : ${dur(d.duration)}`);
+      setPct(100);
+      es.close();
+      /* Brief pause so user sees 100% before transition */
+      setTimeout(() => onComplete(scanId, d), 1000);
+    });
+
+    /* ── error ──────────────────────────────────────────── */
+    es.addEventListener('error', e => {
+      if (e.data) {
+        try {
+          const d = JSON.parse(e.data);
+          addLog(`❌ ${d.message}`, 'ERROR');
+          setErrMsg(d.message);
+        } catch(_) {}
+      }
+      es.close();
+    });
+
+    es.onerror = () => {
+      addLog('⚠ SSE connection lost — pipeline still running in background', 'WARNING');
+    };
+
+    return () => es.close();
+  }, [scanId]);   // eslint-disable-line
+
+  const repoShort   = repoUrl.replace('https://github.com/', '');
+  const critCount   = findings.filter(f => f.severity === 'CRITICAL').length;
+  const highCount   = findings.filter(f => f.severity === 'HIGH').length;
+
+  return (
+    <div className="relative min-h-screen bg-ink overflow-hidden">
+      {/* Ambient orb */}
+      <div className="orb" style={{
+        width:700, height:700, top:'-200px', right:'-200px',
+        background:'radial-gradient(circle, rgba(34,211,238,.055) 0%, transparent 65%)',
+      }}/>
+
+      <div className="relative z-10 max-w-6xl mx-auto px-5 py-7">
+
+        {/* ── Top bar ── */}
+        <div className="flex items-center gap-3 mb-7 anim-fade">
+          <div className="w-9 h-9 rounded-xl bg-cyan/10 border border-cyan/20 flex items-center justify-center text-cyan">
+            <Ic.Shield/>
+          </div>
+          <div>
+            <p className="font-display font-800 text-[13px] text-snow">SwiftAudit</p>
+            <p className="text-[10px] font-mono text-fog">{repoShort}</p>
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <span className="w-[7px] h-[7px] rounded-full bg-cyan" style={{ animation:'blink 1.3s ease-in-out infinite' }}/>
+            <span className="text-[11px] font-mono text-cyan">Scanning…</span>
+          </div>
+        </div>
+
+        {/* ── Progress ── */}
+        <div className="mb-7 anim-up" style={{ animationDelay:'.07s' }}>
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] font-mono text-fog truncate max-w-[78%]">{step}</span>
+            <span className="text-[13px] font-display font-700 text-snow">{pct}%</span>
+          </div>
+          <ProgBar pct={pct} phase={phase}/>
+        </div>
+
+        {/* ── Main grid ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+          {/* LEFT: phase track + stats */}
+          <div
+            className="lg:col-span-3 flex flex-col gap-4 anim-left"
+            style={{ animationDelay:'.1s' }}
+          >
+            <p className="text-[9px] text-ash uppercase tracking-[.15em]">Pipeline stages</p>
+            <PhaseTracker currentPhase={phase}/>
+
+            {/* Counter tiles */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              {[
+                { label:'Findings', val: findings.length, col:'#e8eef8' },
+                { label:'Critical', val: critCount,       col:'#f87171' },
+                { label:'High',     val: highCount,       col:'#fbbf24' },
+                { label:'Done',     val: `${pct}%`,       col:'#22d3ee' },
+              ].map(t => (
+                <div key={t.label} className="bg-card border border-rim rounded-xl p-3">
+                  <p className="text-[9px] font-mono text-ash uppercase tracking-wide mb-1">{t.label}</p>
+                  <p className="text-[22px] font-display font-800 leading-none" style={{ color: t.col }}>
+                    {t.val}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* RIGHT: terminal + live feed */}
+          <div
+            className="lg:col-span-9 flex flex-col gap-4 anim-up"
+            style={{ animationDelay:'.14s' }}
+          >
+            <Terminal logs={logs}/>
+            <LiveFeed findings={findings}/>
+          </div>
+        </div>
+
+        {/* Error banner */}
+        {errMsg && (
+          <div className="mt-6 bg-coral/5 border border-coral/30 rounded-xl px-5 py-4 flex gap-3 items-start anim-up">
+            <span className="text-coral flex-shrink-0 mt-[1px]"><Ic.Warn/></span>
+            <div>
+              <p className="text-[12px] font-mono text-coral font-medium">Pipeline Error</p>
+              <p className="text-[11px] text-coral/70 mt-1 leading-relaxed">{errMsg}</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   RESULTS: GradeRing
+════════════════════════════════════════════════════════════ */
+function GradeRing({ grade, score }) {
+  const col = GRADE_COL[grade] || '#8492a6';
+  const deg = ((score || 0) / 100) * 360;
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div
+        className="w-[90px] h-[90px] rounded-full p-[5px]"
+        style={{ background:`conic-gradient(${col} 0deg ${deg}deg, #1e2638 ${deg}deg 360deg)` }}
+      >
+        <div className="w-full h-full rounded-full bg-card flex flex-col items-center justify-center">
+          <span className="font-display font-900 text-[2rem] leading-none" style={{ color:col }}>{grade}</span>
+          <span className="text-[9px] font-mono text-ash mt-[1px]">{score}/100</span>
+        </div>
+      </div>
+      <span className="text-[9px] font-mono text-ash tracking-wide">Risk Grade</span>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   RESULTS: StatTile
+════════════════════════════════════════════════════════════ */
+function StatTile({ label, value, color }) {
+  return (
+    <div className="bg-card border border-rim rounded-xl p-4">
+      <p className="text-[9px] font-mono text-ash uppercase tracking-[.12em] mb-1">{label}</p>
+      <p className="font-display font-800 text-[26px] leading-none" style={{ color }}>
+        {num(value)}
+      </p>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   RESULTS: SeverityBars
+════════════════════════════════════════════════════════════ */
+function SevBars({ findings }) {
+  const counts = { CRITICAL:0, HIGH:0, MEDIUM:0, LOW:0, INFO:0 };
+  (findings || []).forEach(f => { counts[f.severity] = (counts[f.severity]||0) + 1; });
+  const max = Math.max(...Object.values(counts), 1);
+  return (
+    <div className="bg-card border border-rim rounded-xl p-5">
+      <p className="text-[9px] font-mono text-ash uppercase tracking-[.15em] mb-4">Severity breakdown</p>
+      <div className="space-y-[10px]">
+        {Object.entries(counts).map(([sev, cnt]) => (
+          <div key={sev} className="flex items-center gap-3">
+            <span className="text-[9px] font-mono text-fog w-14 text-right uppercase">{sev}</span>
+            <div className="flex-1 bg-well rounded-md h-[18px] overflow-hidden">
+              <div
+                className="h-full rounded-md bar-fill"
+                style={{
+                  width: `${(cnt/max)*100}%`,
+                  background: SEV_COLOR[sev],
+                  opacity: cnt === 0 ? .1 : 1,
+                }}
+              />
+            </div>
+            <span className="text-[11px] font-mono font-medium w-7 text-right" style={{ color: SEV_COLOR[sev] }}>
+              {cnt}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   RESULTS: Radar SVG
+════════════════════════════════════════════════════════════ */
+function Radar({ scores }) {
+  if (!scores) return null;
+  const axes = [
+    { key:'authentication',    label:'Auth'    },
+    { key:'input_validation',  label:'Input'   },
+    { key:'secrets_management',label:'Secrets' },
+    { key:'api_security',      label:'API'     },
+    { key:'dependency_safety', label:'Deps'    },
+    { key:'configuration',     label:'Config'  },
+  ];
+  const N=6, R=68, cx=100, cy=100;
+  const pt = (i, v) => {
+    const a = (Math.PI*2*i/N) - Math.PI/2;
+    const r = (v/100)*R;
+    return [cx + r*Math.cos(a), cy + r*Math.sin(a)];
+  };
+  const lp = i => {
+    const a = (Math.PI*2*i/N) - Math.PI/2;
+    return [cx + (R+16)*Math.cos(a), cy + (R+16)*Math.sin(a)];
+  };
+  const poly = axes.map((a,i) => pt(i, scores[a.key]??100).join(',')).join(' ');
+  const grids = [25,50,75,100];
+  return (
+    <div className="bg-card border border-rim rounded-xl p-5">
+      <p className="text-[9px] font-mono text-ash uppercase tracking-[.15em] mb-4">Security radar</p>
+      <svg viewBox="0 0 200 200" className="w-full max-w-[200px] mx-auto">
+        {grids.map(g => (
+          <polygon key={g} className="radar-grid"
+            points={axes.map((_,i) => pt(i,g).join(',')).join(' ')}
+          />
+        ))}
+        {axes.map((_,i) => {
+          const [x,y] = pt(i,100);
+          return <line key={i} x1={cx} y1={cy} x2={x} y2={y} className="radar-grid"/>;
+        })}
+        <polygon className="radar-poly" points={poly}/>
+        {axes.map((a,i) => {
+          const [lx,ly] = lp(i);
+          return (
+            <text key={a.key} x={lx} y={ly} textAnchor="middle" dominantBaseline="middle"
+              fontSize="7.5" fill="#8492a6" fontFamily="DM Mono">
+              {a.label}
+            </text>
+          );
+        })}
+        {axes.map((a,i) => {
+          const [x,y] = pt(i, scores[a.key]??100);
+          return <circle key={a.key} cx={x} cy={y} r="2.5" fill="#22d3ee"/>;
+        })}
+      </svg>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   RESULTS: FindingCard
+════════════════════════════════════════════════════════════ */
+function FindingCard({ f, i }) {
+  const [open,   setOpen]   = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  function copy(txt) {
+    navigator.clipboard.writeText(txt).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  return (
+    <div
+      className="fcard bg-card border border-rim rounded-xl overflow-hidden anim-fade"
+      style={{ animationDelay:`${Math.min(i*.022, .5)}s` }}
+    >
+      {/* Header */}
+      <div
+        className="flex items-center gap-2.5 px-4 py-3"
+        onClick={() => setOpen(o => !o)}
+      >
+        <SevBadge sev={f.severity}/>
+        <span className="text-[12px] font-mono text-mist flex-1 truncate">{f.title}</span>
+        <SrcTag src={f.detection_source}/>
+        <span className="ml-1.5 text-ash flex-shrink-0">
+          {open ? <Ic.ChevDown/> : <Ic.ChevRight/>}
+        </span>
+      </div>
+
+      {/* Detail */}
+      <div className={cx('expand', open && 'open')}>
+        <div>
+          <div className="border-t border-rim px-4 py-4 space-y-3">
+
+            {/* Meta row */}
+            <div className="flex flex-wrap gap-x-5 gap-y-1 text-[10px] font-mono text-fog">
+              {f.file_path && (
+                <span className="flex items-center gap-[5px]">
+                  <Ic.File/>
+                  <span className="text-sky">{f.file_path}</span>
+                  {f.line_number && <span className="text-ash">:{f.line_number}</span>}
+                </span>
+              )}
+              {f.cwe_id     && <span className="text-mauve">{f.cwe_id}</span>}
+              {f.cvss_score && <span className="text-gold">CVSS {f.cvss_score}</span>}
+              {f.category   && <span className="text-ash/80">{f.category}</span>}
+            </div>
+
+            {/* Description */}
+            {f.description && (
+              <p className="text-[12px] text-mist/80 leading-relaxed">{f.description}</p>
+            )}
+
+            {/* Code snippet */}
+            {f.code_snippet && (
+              <div className="rounded-lg overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-1.5 bg-pit border-b border-rim">
+                  <span className="text-[9px] font-mono text-ash">vulnerable code</span>
+                  <button
+                    onClick={() => copy(f.code_snippet)}
+                    className="flex items-center gap-1 text-[9px] font-mono text-ash hover:text-cyan transition-colors"
+                  >
+                    <Ic.Copy/> {copied ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+                <pre
+                  className="bg-pit px-4 py-3 text-[11px] font-mono text-lime/80 overflow-x-auto leading-relaxed"
+                  style={{ whiteSpace:'pre-wrap', wordBreak:'break-word' }}
+                >
+                  {f.code_snippet}
+                </pre>
+              </div>
+            )}
+
+            {/* Remediation */}
+            {f.patch_explanation && (
+              <div className="bg-lime/[.05] border border-lime/20 rounded-lg p-3.5">
+                <p className="text-[9px] font-mono text-lime uppercase tracking-[.15em] mb-1.5">Remediation</p>
+                <p className="text-[12px] text-mist/80 leading-relaxed">{f.patch_explanation}</p>
+              </div>
+            )}
+
+            {/* Exploit path */}
+            {f.exploit_path && (
+              <div className="bg-coral/[.05] border border-coral/25 rounded-lg p-3.5">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[9px] font-mono text-coral uppercase tracking-[.15em]">Attack path</p>
+                  {f.exploit_path.difficulty && (
+                    <span className="text-[9px] font-mono text-coral/60 border border-coral/20 px-2 py-[2px] rounded">
+                      {f.exploit_path.difficulty}
+                    </span>
+                  )}
+                </div>
+                {f.exploit_path.title && (
+                  <p className="text-[11px] font-mono text-mist/80 mb-2">{f.exploit_path.title}</p>
+                )}
+                {(f.exploit_path.steps || []).slice(0, 4).map((s, si) => (
+                  <div key={si} className="flex gap-2 text-[10px] font-mono text-fog mb-1">
+                    <span className="text-coral/50 flex-shrink-0">{si+1}.</span>
+                    <span>{s.action}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   PAGE: RESULTS
+════════════════════════════════════════════════════════════ */
+function ResultsPage({ scanId, onNewScan }) {
+  const [result,  setResult]  = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [sevFilt, setSevFilt] = useState('ALL');
+  const [search,  setSearch]  = useState('');
+  const [sort,    setSort]    = useState('severity');
+
+  useEffect(() => {
+    fetch(`${API}/scan/${scanId}/result`)
+      .then(r => r.json())
+      .then(d => { setResult(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [scanId]);
+
+  const filtered = useMemo(() => {
+    if (!result?.findings) return [];
+    let f = result.findings;
+    if (sevFilt !== 'ALL') f = f.filter(x => x.severity === sevFilt);
+    if (search) {
+      const q = search.toLowerCase();
+      f = f.filter(x =>
+        (x.title||'').toLowerCase().includes(q) ||
+        (x.description||'').toLowerCase().includes(q) ||
+        (x.file_path||'').toLowerCase().includes(q)
+      );
+    }
+    const s = [...f];
+    if (sort === 'severity') s.sort((a,b) => (SEV_RANK[a.severity]??9)-(SEV_RANK[b.severity]??9));
+    if (sort === 'source')   s.sort((a,b) => a.detection_source.localeCompare(b.detection_source));
+    if (sort === 'file')     s.sort((a,b) => (a.file_path||'').localeCompare(b.file_path||''));
+    return s;
+  }, [result, sevFilt, search, sort]);
+
+  if (loading) return (
+    <div className="min-h-screen bg-ink flex items-center justify-center">
+      <div className="text-center">
+        <div className="spinner w-8 h-8 mx-auto mb-4"/>
+        <p className="text-fog font-mono text-sm">Loading results…</p>
+      </div>
+    </div>
+  );
+
+  if (!result || result.error) return (
+    <div className="min-h-screen bg-ink flex items-center justify-center gap-3">
+      <span className="text-coral"><Ic.Warn/></span>
+      <p className="text-coral font-mono text-sm">{result?.error || 'Failed to load results'}</p>
+    </div>
+  );
+
+  const meta = result.metadata || {};
+  const sevOpts = ['ALL','CRITICAL','HIGH','MEDIUM','LOW','INFO'];
+
+  return (
+    <div className="min-h-screen bg-ink">
+
+      {/* ── Sticky nav ── */}
+      <div className="sticky top-0 z-50 bg-ink/96 backdrop-blur-md border-b border-rim">
+        <div className="max-w-7xl mx-auto px-5 py-3 flex items-center gap-4">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-cyan/10 border border-cyan/25 flex items-center justify-center text-cyan">
+              <Ic.Shield/>
+            </div>
+            <span className="font-display font-800 text-[14px] text-snow">SwiftAudit</span>
+          </div>
+          {meta.owner && (
+            <span className="text-[11px] font-mono text-fog">
+              {meta.owner}/{meta.repo_name}
+            </span>
+          )}
+          <div className="ml-auto flex items-center gap-3">
+            {result.scan_duration_seconds && (
+              <span className="text-[10px] font-mono text-ash">{dur(result.scan_duration_seconds)}</span>
+            )}
+            <button
+              onClick={onNewScan}
+              className="flex items-center gap-1.5 text-[11px] font-mono text-cyan border border-cyan/30 bg-cyan/5 hover:bg-cyan/10 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              <Ic.Plus/> New scan
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-5 py-8">
+
+        {/* ── Summary tiles ── */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-8 anim-up">
+          <div className="col-span-2 md:col-span-1 flex justify-center items-center">
+            <GradeRing grade={result.risk_grade} score={result.overall_risk_score}/>
+          </div>
+          <StatTile label="Total"    value={result.findings_count}         color="#e8eef8"/>
+          <StatTile label="Critical" value={result.critical_count||0}      color="#f87171"/>
+          <StatTile label="High"     value={result.high_count||0}          color="#fbbf24"/>
+          <StatTile label="Medium"   value={result.medium_count||0}        color="#c084fc"/>
+          <StatTile label="Tool"     value={result.tool_finding_count||0}  color="#4ade80"/>
+          <StatTile label="LLM"      value={result.llm_finding_count||0}   color="#c084fc"/>
+        </div>
+
+        {/* ── Executive summary ── */}
+        {result.summary && (
+          <div
+            className="mb-8 bg-card border border-rim rounded-xl p-5 anim-up"
+            style={{ animationDelay:'.08s' }}
+          >
+            <p className="text-[9px] font-mono text-ash uppercase tracking-[.15em] mb-2">Executive Summary</p>
+            <p className="text-[13px] text-mist/85 leading-relaxed">{result.summary}</p>
+          </div>
+        )}
+
+        {/* ── Charts ── */}
+        <div
+          className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8 anim-up"
+          style={{ animationDelay:'.12s' }}
+        >
+          <SevBars findings={result.findings}/>
+          <Radar scores={result.radar_scores}/>
+        </div>
+
+        {/* ── Findings ── */}
+        <div className="anim-up" style={{ animationDelay:'.16s' }}>
+
+          {/* Toolbar */}
+          <div className="flex flex-wrap items-center gap-2.5 mb-4">
+            <h2 className="font-display font-800 text-[15px] text-snow">
+              Findings
+              <span className="text-ash font-mono text-[11px] font-normal ml-2">({filtered.length})</span>
+            </h2>
+
+            {/* Severity filters */}
+            <div className="flex gap-1.5 flex-wrap">
+              {sevOpts.map(s => (
+                <button
+                  key={s}
+                  onClick={() => setSevFilt(s)}
+                  className={cx(
+                    'text-[9px] font-mono px-2.5 py-[5px] rounded-lg border transition-all',
+                    sevFilt === s
+                      ? 'border-cyan/40 bg-cyan/10 text-cyan'
+                      : 'border-rim bg-card text-ash hover:border-fence hover:text-fog'
+                  )}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+
+            {/* Search */}
+            <div className="flex-1 min-w-[160px] relative">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ash pointer-events-none">
+                <Ic.Search/>
+              </span>
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search title, file, description…"
+                className="w-full bg-card border border-rim rounded-lg pl-7 pr-3 py-[6px] text-[11px] font-mono text-snow placeholder-ash/50 focus:outline-none focus:border-cyan/40 focus:ring-1 focus:ring-cyan/10 transition"
+              />
+            </div>
+
+            {/* Sort */}
+            <select
+              value={sort}
+              onChange={e => setSort(e.target.value)}
+              className="bg-card border border-rim rounded-lg px-3 py-[6px] text-[11px] font-mono text-fog focus:outline-none focus:border-cyan/40 transition cursor-pointer"
+            >
+              <option value="severity">Severity ↓</option>
+              <option value="source">Source</option>
+              <option value="file">File</option>
+            </select>
+          </div>
+
+          {/* Cards list */}
+          <div className="space-y-2">
+            {filtered.length === 0 ? (
+              <div className="text-center py-14 text-ash font-mono text-sm">
+                {search || sevFilt !== 'ALL' ? 'No findings match your filters.' : 'No findings detected.'}
+              </div>
+            ) : (
+              filtered.map((f, i) => <FindingCard key={f.id || i} f={f} i={i}/>)
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   ROOT APP
+════════════════════════════════════════════════════════════ */
+function App() {
+  const [view,   setView]   = useState('landing');   // 'landing' | 'scanning' | 'results'
+  const [scanId, setScanId] = useState('');
+  const [repo,   setRepo]   = useState('');
+
+  function handleStart(id, url) {
+    setScanId(id);
+    setRepo(url);
+    setView('scanning');
+  }
+
+  function handleComplete(id) {
+    setView('results');
+  }
+
+  function handleNewScan() {
+    setScanId('');
+    setRepo('');
+    setView('landing');
+  }
+
+  if (view === 'landing')  return <LandingPage onStart={handleStart}/>;
+  if (view === 'scanning') return <ScanningPage scanId={scanId} repoUrl={repo} onComplete={handleComplete}/>;
+  if (view === 'results')  return <ResultsPage  scanId={scanId} onNewScan={handleNewScan}/>;
+  return null;
+}
+
+/* ════════════════════════════════════════════════════════════
+   MOUNT
+════════════════════════════════════════════════════════════ */
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App/>);
+</script>
+</body>
+</html>
