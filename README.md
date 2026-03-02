@@ -193,8 +193,8 @@ trivy image alpine
 **1. Clone the repository**
 
 ```bash
-git clone https://github.com/10486-JosephMutua/SwiftAudit.git
-cd SwiftAudit
+git clone https://github.com/10486-JosephMutua/Swift.git
+cd Swift
 ```
 
 **2. Install Python dependencies**
